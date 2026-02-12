@@ -107,7 +107,7 @@ export default function TokenChart({ data }: { data: TokenData[] }) {
           padding: 15,
           font: {
             size: 12,
-            weight: '500' as const
+            weight: 500
           },
           usePointStyle: true,
           pointStyle: 'circle'
