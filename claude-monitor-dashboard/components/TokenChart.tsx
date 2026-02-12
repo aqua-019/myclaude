@@ -29,6 +29,7 @@ interface TokenData {
   input: number;
   output: number;
   total: number;
+  tokens?: number;
 }
 
 export default function TokenChart({ data }: { data: TokenData[] }) {
