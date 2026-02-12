@@ -1,10 +1,10 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import WebSocket from 'ws';
+import { WebSocketServer } from 'ws';
 
 // WebSocket server for dashboard communication
-const wss = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocketServer({ port: 8080 });
 const clients = new Set();
 
 wss.on('connection', (ws) => {
@@ -18,31 +18,19 @@ wss.on('connection', (ws) => {
 });
 
 // Broadcast to all connected dashboard clients
-function broadcastToDashboard(data) {
-  const message = JSON.stringify(data);
+function broadcast(data) {
   clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(message);
+    if (client.readyState === 1) { // WebSocket.OPEN
+      client.send(JSON.stringify(data));
     }
   });
 }
 
-// Store for monitoring data
-const monitoringData = {
-  sessions: new Map(),
-  metrics: {
-    totalTokens: 0,
-    totalRequests: 0,
-    activeAgents: 0,
-    startTime: Date.now()
-  }
-};
-
-// Create MCP server
+// MCP Server setup
 const server = new Server(
   {
     name: "claude-monitor",
-    version: "0.1.0",
+    version: "1.0.0",
   },
   {
     capabilities: {
@@ -52,304 +40,268 @@ const server = new Server(
 );
 
 // Tool definitions
+const TOOLS = [
+  {
+    name: "log_session_start",
+    description: "Log the start of a new Claude session",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sessionId: {
+          type: "string",
+          description: "Unique identifier for this session"
+        },
+        agentName: {
+          type: "string",
+          description: "Name of the agent/assistant"
+        },
+        model: {
+          type: "string",
+          description: "Model being used (e.g., claude-sonnet-4)"
+        }
+      },
+      required: ["sessionId", "agentName", "model"]
+    }
+  },
+  {
+    name: "log_session_end",
+    description: "Log the end of a Claude session",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sessionId: {
+          type: "string",
+          description: "Session identifier"
+        }
+      },
+      required: ["sessionId"]
+    }
+  },
+  {
+    name: "log_token_usage",
+    description: "Log token usage for a session",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sessionId: {
+          type: "string",
+          description: "Session identifier"
+        },
+        inputTokens: {
+          type: "number",
+          description: "Number of input tokens"
+        },
+        outputTokens: {
+          type: "number",
+          description: "Number of output tokens"
+        }
+      },
+      required: ["sessionId", "inputTokens", "outputTokens"]
+    }
+  },
+  {
+    name: "log_task_start",
+    description: "Log the start of a task",
+    inputSchema: {
+      type: "object",
+      properties: {
+        taskId: {
+          type: "string",
+          description: "Unique identifier for this task"
+        },
+        sessionId: {
+          type: "string",
+          description: "Associated session ID"
+        },
+        description: {
+          type: "string",
+          description: "Task description"
+        },
+        priority: {
+          type: "string",
+          enum: ["low", "medium", "high", "critical"],
+          description: "Task priority level"
+        }
+      },
+      required: ["taskId", "sessionId", "description", "priority"]
+    }
+  },
+  {
+    name: "log_task_complete",
+    description: "Log task completion",
+    inputSchema: {
+      type: "object",
+      properties: {
+        taskId: {
+          type: "string",
+          description: "Task identifier"
+        },
+        status: {
+          type: "string",
+          enum: ["success", "failed", "partial"],
+          description: "Completion status"
+        },
+        duration: {
+          type: "number",
+          description: "Task duration in milliseconds"
+        }
+      },
+      required: ["taskId", "status"]
+    }
+  },
+  {
+    name: "log_error",
+    description: "Log an error or warning",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sessionId: {
+          type: "string",
+          description: "Session identifier"
+        },
+        severity: {
+          type: "string",
+          enum: ["warning", "error", "critical"],
+          description: "Error severity"
+        },
+        message: {
+          type: "string",
+          description: "Error message"
+        }
+      },
+      required: ["sessionId", "severity", "message"]
+    }
+  }
+];
+
+// List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
-      {
-        name: "log_session_start",
-        description: "Log when a new Claude session starts",
-        inputSchema: {
-          type: "object",
-          properties: {
-            sessionId: {
-              type: "string",
-              description: "Unique session identifier"
-            },
-            agentName: {
-              type: "string",
-              description: "Name of the agent/subagent"
-            },
-            model: {
-              type: "string",
-              description: "Model being used (e.g., claude-sonnet-4)"
-            }
-          },
-          required: ["sessionId", "agentName"]
-        }
-      },
-      {
-        name: "log_session_end",
-        description: "Log when a Claude session ends",
-        inputSchema: {
-          type: "object",
-          properties: {
-            sessionId: {
-              type: "string",
-              description: "Session identifier"
-            }
-          },
-          required: ["sessionId"]
-        }
-      },
-      {
-        name: "log_token_usage",
-        description: "Log token usage for a request",
-        inputSchema: {
-          type: "object",
-          properties: {
-            sessionId: {
-              type: "string",
-              description: "Session identifier"
-            },
-            inputTokens: {
-              type: "number",
-              description: "Input tokens used"
-            },
-            outputTokens: {
-              type: "number",
-              description: "Output tokens generated"
-            },
-            contextWindow: {
-              type: "number",
-              description: "Total context window size"
-            }
-          },
-          required: ["sessionId", "inputTokens", "outputTokens"]
-        }
-      },
-      {
-        name: "log_task_start",
-        description: "Log when a task begins",
-        inputSchema: {
-          type: "object",
-          properties: {
-            sessionId: {
-              type: "string",
-              description: "Session identifier"
-            },
-            taskId: {
-              type: "string",
-              description: "Unique task identifier"
-            },
-            taskDescription: {
-              type: "string",
-              description: "Description of the task"
-            },
-            priority: {
-              type: "string",
-              enum: ["low", "medium", "high", "critical"],
-              description: "Task priority level"
-            }
-          },
-          required: ["sessionId", "taskId", "taskDescription"]
-        }
-      },
-      {
-        name: "log_task_complete",
-        description: "Log when a task completes",
-        inputSchema: {
-          type: "object",
-          properties: {
-            sessionId: {
-              type: "string",
-              description: "Session identifier"
-            },
-            taskId: {
-              type: "string",
-              description: "Task identifier"
-            },
-            status: {
-              type: "string",
-              enum: ["success", "failed", "partial"],
-              description: "Task completion status"
-            },
-            duration: {
-              type: "number",
-              description: "Task duration in milliseconds"
-            }
-          },
-          required: ["sessionId", "taskId", "status"]
-        }
-      },
-      {
-        name: "log_error",
-        description: "Log an error event",
-        inputSchema: {
-          type: "object",
-          properties: {
-            sessionId: {
-              type: "string",
-              description: "Session identifier"
-            },
-            errorType: {
-              type: "string",
-              description: "Type of error"
-            },
-            errorMessage: {
-              type: "string",
-              description: "Error message"
-            },
-            severity: {
-              type: "string",
-              enum: ["warning", "error", "critical"],
-              description: "Error severity"
-            }
-          },
-          required: ["sessionId", "errorType", "errorMessage"]
-        }
-      }
-    ]
-  };
+  return { tools: TOOLS };
 });
 
-// Tool call handler
+// Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-
+  
   try {
     switch (name) {
       case "log_session_start": {
-        const session = {
-          id: args.sessionId,
-          agentName: args.agentName,
-          model: args.model || "unknown",
-          startTime: Date.now(),
-          tasks: [],
-          tokenUsage: { input: 0, output: 0, total: 0 }
-        };
-        
-        monitoringData.sessions.set(args.sessionId, session);
-        monitoringData.metrics.activeAgents++;
-        
-        broadcastToDashboard({
+        const data = {
           type: 'session_start',
-          data: session
-        });
-        
+          timestamp: Date.now(),
+          data: {
+            sessionId: args.sessionId,
+            agentName: args.agentName,
+            model: args.model
+          }
+        };
+        broadcast(data);
         return {
-          content: [{ 
-            type: "text", 
-            text: `Session ${args.sessionId} started for agent ${args.agentName}` 
+          content: [{
+            type: "text",
+            text: `Session ${args.sessionId} started for ${args.agentName} using ${args.model}`
           }]
         };
       }
 
       case "log_session_end": {
-        const session = monitoringData.sessions.get(args.sessionId);
-        if (session) {
-          monitoringData.metrics.activeAgents = Math.max(0, monitoringData.metrics.activeAgents - 1);
-          
-          broadcastToDashboard({
-            type: 'session_end',
-            data: { sessionId: args.sessionId }
-          });
-        }
-        
+        const data = {
+          type: 'session_end',
+          timestamp: Date.now(),
+          data: {
+            sessionId: args.sessionId
+          }
+        };
+        broadcast(data);
         return {
-          content: [{ 
-            type: "text", 
-            text: `Session ${args.sessionId} ended` 
+          content: [{
+            type: "text",
+            text: `Session ${args.sessionId} ended`
           }]
         };
       }
 
       case "log_token_usage": {
-        const session = monitoringData.sessions.get(args.sessionId);
-        if (session) {
-          session.tokenUsage.input += args.inputTokens;
-          session.tokenUsage.output += args.outputTokens;
-          session.tokenUsage.total = session.tokenUsage.input + session.tokenUsage.output;
-          
-          monitoringData.metrics.totalTokens += args.inputTokens + args.outputTokens;
-          monitoringData.metrics.totalRequests++;
-          
-          broadcastToDashboard({
-            type: 'token_update',
-            data: {
-              sessionId: args.sessionId,
-              tokenUsage: session.tokenUsage,
-              contextWindow: args.contextWindow
+        const data = {
+          type: 'token_usage',
+          timestamp: Date.now(),
+          data: {
+            sessionId: args.sessionId,
+            tokenUsage: {
+              input: args.inputTokens,
+              output: args.outputTokens,
+              total: args.inputTokens + args.outputTokens
             }
-          });
-        }
-        
+          }
+        };
+        broadcast(data);
         return {
-          content: [{ 
-            type: "text", 
-            text: `Logged ${args.inputTokens + args.outputTokens} tokens for session ${args.sessionId}` 
+          content: [{
+            type: "text",
+            text: `Logged ${args.inputTokens + args.outputTokens} total tokens for session ${args.sessionId}`
           }]
         };
       }
 
       case "log_task_start": {
-        const session = monitoringData.sessions.get(args.sessionId);
-        if (session) {
-          const task = {
-            id: args.taskId,
-            description: args.taskDescription,
-            priority: args.priority || "medium",
-            status: "in_progress",
-            startTime: Date.now()
-          };
-          
-          session.tasks.push(task);
-          
-          broadcastToDashboard({
-            type: 'task_start',
-            data: { sessionId: args.sessionId, task }
-          });
-        }
-        
+        const data = {
+          type: 'task_start',
+          timestamp: Date.now(),
+          data: {
+            taskId: args.taskId,
+            sessionId: args.sessionId,
+            task: {
+              id: args.taskId,
+              description: args.description,
+              priority: args.priority,
+              status: 'in_progress',
+              startTime: Date.now()
+            }
+          }
+        };
+        broadcast(data);
         return {
-          content: [{ 
-            type: "text", 
-            text: `Task ${args.taskId} started` 
+          content: [{
+            type: "text",
+            text: `Task ${args.taskId} started: ${args.description}`
           }]
         };
       }
 
       case "log_task_complete": {
-        const session = monitoringData.sessions.get(args.sessionId);
-        if (session) {
-          const task = session.tasks.find(t => t.id === args.taskId);
-          if (task) {
-            task.status = args.status;
-            task.endTime = Date.now();
-            task.duration = args.duration || (task.endTime - task.startTime);
+        const data = {
+          type: 'task_complete',
+          timestamp: Date.now(),
+          data: {
+            taskId: args.taskId,
+            status: args.status,
+            duration: args.duration
           }
-          
-          broadcastToDashboard({
-            type: 'task_complete',
-            data: { sessionId: args.sessionId, taskId: args.taskId, status: args.status }
-          });
-        }
-        
+        };
+        broadcast(data);
         return {
-          content: [{ 
-            type: "text", 
-            text: `Task ${args.taskId} completed with status: ${args.status}` 
+          content: [{
+            type: "text",
+            text: `Task ${args.taskId} completed with status: ${args.status}`
           }]
         };
       }
 
       case "log_error": {
-        const errorEvent = {
-          sessionId: args.sessionId,
-          type: args.errorType,
-          message: args.errorMessage,
-          severity: args.severity || "error",
-          timestamp: Date.now()
-        };
-        
-        broadcastToDashboard({
+        const data = {
           type: 'error',
-          data: errorEvent
-        });
-        
+          timestamp: Date.now(),
+          data: {
+            sessionId: args.sessionId,
+            severity: args.severity,
+            errorMessage: args.message
+          }
+        };
+        broadcast(data);
         return {
-          content: [{ 
-            type: "text", 
-            text: `Error logged: ${args.errorMessage}` 
+          content: [{
+            type: "text",
+            text: `Logged ${args.severity}: ${args.message}`
           }]
         };
       }
@@ -359,24 +311,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   } catch (error) {
     return {
-      content: [{ 
-        type: "text", 
-        text: `Error: ${error.message}` 
+      content: [{
+        type: "text",
+        text: `Error: ${error.message}`
       }],
       isError: true
     };
   }
 });
 
-// Start the server
+// Start MCP server
 async function main() {
-  console.log('Starting Claude Monitor MCP Server...');
-  console.log('WebSocket server running on ws://localhost:8080');
+  console.log('MCP Server starting...');
+  console.log('WebSocket server listening on port 8080');
   
   const transport = new StdioServerTransport();
   await server.connect(transport);
   
-  console.log('MCP Server ready and waiting for connections');
+  console.log('Claude Monitor MCP Server running');
+  console.log('Available tools:', TOOLS.map(t => t.name).join(', '));
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error('Server error:', error);
+  process.exit(1);
+});
