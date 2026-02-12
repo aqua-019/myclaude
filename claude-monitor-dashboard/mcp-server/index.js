@@ -1,338 +1,177 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import express from 'express';
 import { WebSocketServer } from 'ws';
+import { createServer } from 'http';
+import cors from 'cors';
 
-// WebSocket server for dashboard communication
-const wss = new WebSocketServer({ port: process.env.PORT || 8080 });
+const app = express();
+const server = createServer(app);
+const wss = new WebSocketServer({ server });
+
+const PORT = process.env.PORT || 8080;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Store connected dashboard clients
 const clients = new Set();
 
+// WebSocket connection handler
 wss.on('connection', (ws) => {
   clients.add(ws);
-  console.log('Dashboard client connected');
+  console.log('Dashboard client connected. Total clients:', clients.size);
   
   ws.on('close', () => {
     clients.delete(ws);
-    console.log('Dashboard client disconnected');
+    console.log('Dashboard client disconnected. Total clients:', clients.size);
   });
 });
 
-// Broadcast to all connected dashboard clients
+// Broadcast to all connected dashboards
 function broadcast(data) {
+  const message = JSON.stringify(data);
   clients.forEach((client) => {
     if (client.readyState === 1) { // WebSocket.OPEN
-      client.send(JSON.stringify(data));
+      client.send(message);
     }
   });
 }
 
-// MCP Server setup
-const server = new Server(
-  {
-    name: "claude-monitor",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
-);
+// API Routes
 
-// Tool definitions
-const TOOLS = [
-  {
-    name: "log_session_start",
-    description: "Log the start of a new Claude session",
-    inputSchema: {
-      type: "object",
-      properties: {
-        sessionId: {
-          type: "string",
-          description: "Unique identifier for this session"
-        },
-        agentName: {
-          type: "string",
-          description: "Name of the agent/assistant"
-        },
-        model: {
-          type: "string",
-          description: "Model being used (e.g., claude-sonnet-4)"
-        }
-      },
-      required: ["sessionId", "agentName", "model"]
-    }
-  },
-  {
-    name: "log_session_end",
-    description: "Log the end of a Claude session",
-    inputSchema: {
-      type: "object",
-      properties: {
-        sessionId: {
-          type: "string",
-          description: "Session identifier"
-        }
-      },
-      required: ["sessionId"]
-    }
-  },
-  {
-    name: "log_token_usage",
-    description: "Log token usage for a session",
-    inputSchema: {
-      type: "object",
-      properties: {
-        sessionId: {
-          type: "string",
-          description: "Session identifier"
-        },
-        inputTokens: {
-          type: "number",
-          description: "Number of input tokens"
-        },
-        outputTokens: {
-          type: "number",
-          description: "Number of output tokens"
-        }
-      },
-      required: ["sessionId", "inputTokens", "outputTokens"]
-    }
-  },
-  {
-    name: "log_task_start",
-    description: "Log the start of a task",
-    inputSchema: {
-      type: "object",
-      properties: {
-        taskId: {
-          type: "string",
-          description: "Unique identifier for this task"
-        },
-        sessionId: {
-          type: "string",
-          description: "Associated session ID"
-        },
-        description: {
-          type: "string",
-          description: "Task description"
-        },
-        priority: {
-          type: "string",
-          enum: ["low", "medium", "high", "critical"],
-          description: "Task priority level"
-        }
-      },
-      required: ["taskId", "sessionId", "description", "priority"]
-    }
-  },
-  {
-    name: "log_task_complete",
-    description: "Log task completion",
-    inputSchema: {
-      type: "object",
-      properties: {
-        taskId: {
-          type: "string",
-          description: "Task identifier"
-        },
-        status: {
-          type: "string",
-          enum: ["success", "failed", "partial"],
-          description: "Completion status"
-        },
-        duration: {
-          type: "number",
-          description: "Task duration in milliseconds"
-        }
-      },
-      required: ["taskId", "status"]
-    }
-  },
-  {
-    name: "log_error",
-    description: "Log an error or warning",
-    inputSchema: {
-      type: "object",
-      properties: {
-        sessionId: {
-          type: "string",
-          description: "Session identifier"
-        },
-        severity: {
-          type: "string",
-          enum: ["warning", "error", "critical"],
-          description: "Error severity"
-        },
-        message: {
-          type: "string",
-          description: "Error message"
-        }
-      },
-      required: ["sessionId", "severity", "message"]
-    }
-  }
-];
-
-// List available tools
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return { tools: TOOLS };
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    clients: clients.size,
+    uptime: process.uptime()
+  });
 });
 
-// Handle tool calls
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+// Log session start
+app.post('/api/session/start', (req, res) => {
+  const { sessionId, agentName, model } = req.body;
   
-  try {
-    switch (name) {
-      case "log_session_start": {
-        const data = {
-          type: 'session_start',
-          timestamp: Date.now(),
-          data: {
-            sessionId: args.sessionId,
-            agentName: args.agentName,
-            model: args.model
-          }
-        };
-        broadcast(data);
-        return {
-          content: [{
-            type: "text",
-            text: `Session ${args.sessionId} started for ${args.agentName} using ${args.model}`
-          }]
-        };
-      }
-
-      case "log_session_end": {
-        const data = {
-          type: 'session_end',
-          timestamp: Date.now(),
-          data: {
-            sessionId: args.sessionId
-          }
-        };
-        broadcast(data);
-        return {
-          content: [{
-            type: "text",
-            text: `Session ${args.sessionId} ended`
-          }]
-        };
-      }
-
-      case "log_token_usage": {
-        const data = {
-          type: 'token_usage',
-          timestamp: Date.now(),
-          data: {
-            sessionId: args.sessionId,
-            tokenUsage: {
-              input: args.inputTokens,
-              output: args.outputTokens,
-              total: args.inputTokens + args.outputTokens
-            }
-          }
-        };
-        broadcast(data);
-        return {
-          content: [{
-            type: "text",
-            text: `Logged ${args.inputTokens + args.outputTokens} total tokens for session ${args.sessionId}`
-          }]
-        };
-      }
-
-      case "log_task_start": {
-        const data = {
-          type: 'task_start',
-          timestamp: Date.now(),
-          data: {
-            taskId: args.taskId,
-            sessionId: args.sessionId,
-            task: {
-              id: args.taskId,
-              description: args.description,
-              priority: args.priority,
-              status: 'in_progress',
-              startTime: Date.now()
-            }
-          }
-        };
-        broadcast(data);
-        return {
-          content: [{
-            type: "text",
-            text: `Task ${args.taskId} started: ${args.description}`
-          }]
-        };
-      }
-
-      case "log_task_complete": {
-        const data = {
-          type: 'task_complete',
-          timestamp: Date.now(),
-          data: {
-            taskId: args.taskId,
-            status: args.status,
-            duration: args.duration
-          }
-        };
-        broadcast(data);
-        return {
-          content: [{
-            type: "text",
-            text: `Task ${args.taskId} completed with status: ${args.status}`
-          }]
-        };
-      }
-
-      case "log_error": {
-        const data = {
-          type: 'error',
-          timestamp: Date.now(),
-          data: {
-            sessionId: args.sessionId,
-            severity: args.severity,
-            errorMessage: args.message
-          }
-        };
-        broadcast(data);
-        return {
-          content: [{
-            type: "text",
-            text: `Logged ${args.severity}: ${args.message}`
-          }]
-        };
-      }
-
-      default:
-        throw new Error(`Unknown tool: ${name}`);
-    }
-  } catch (error) {
-    return {
-      content: [{
-        type: "text",
-        text: `Error: ${error.message}`
-      }],
-      isError: true
-    };
-  }
+  const data = {
+    type: 'session_start',
+    timestamp: Date.now(),
+    data: { sessionId, agentName, model }
+  };
+  
+  broadcast(data);
+  console.log('Session started:', sessionId);
+  
+  res.json({ success: true, sessionId });
 });
 
-// Start MCP server
-async function main() {
-  console.log('MCP Server starting...');
-  console.log(`WebSocket server listening on port ${process.env.PORT || 8080}`);
+// Log session end
+app.post('/api/session/end', (req, res) => {
+  const { sessionId } = req.body;
   
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  const data = {
+    type: 'session_end',
+    timestamp: Date.now(),
+    data: { sessionId }
+  };
   
-  console.log('Claude Monitor MCP Server running');
-  console.log('Available tools:', TOOLS.map(t => t.name).join(', '));
-}
+  broadcast(data);
+  console.log('Session ended:', sessionId);
+  
+  res.json({ success: true, sessionId });
+});
 
-main().catch((error) => {
-  console.error('Server error:', error);
-  process.exit(1);
+// Log token usage
+app.post('/api/tokens', (req, res) => {
+  const { sessionId, inputTokens, outputTokens } = req.body;
+  
+  const data = {
+    type: 'token_usage',
+    timestamp: Date.now(),
+    data: {
+      sessionId,
+      tokenUsage: {
+        input: inputTokens,
+        output: outputTokens,
+        total: inputTokens + outputTokens
+      }
+    }
+  };
+  
+  broadcast(data);
+  console.log('Token usage logged:', inputTokens + outputTokens, 'total');
+  
+  res.json({ success: true, total: inputTokens + outputTokens });
+});
+
+// Log task start
+app.post('/api/task/start', (req, res) => {
+  const { taskId, sessionId, description, priority } = req.body;
+  
+  const data = {
+    type: 'task_start',
+    timestamp: Date.now(),
+    data: {
+      taskId,
+      sessionId,
+      task: {
+        id: taskId,
+        description,
+        priority: priority || 'medium',
+        status: 'in_progress',
+        startTime: Date.now()
+      }
+    }
+  };
+  
+  broadcast(data);
+  console.log('Task started:', description);
+  
+  res.json({ success: true, taskId });
+});
+
+// Log task complete
+app.post('/api/task/complete', (req, res) => {
+  const { taskId, status, duration } = req.body;
+  
+  const data = {
+    type: 'task_complete',
+    timestamp: Date.now(),
+    data: {
+      taskId,
+      status: status || 'success',
+      duration
+    }
+  };
+  
+  broadcast(data);
+  console.log('Task completed:', taskId, status);
+  
+  res.json({ success: true, taskId });
+});
+
+// Log error
+app.post('/api/error', (req, res) => {
+  const { sessionId, severity, message } = req.body;
+  
+  const data = {
+    type: 'error',
+    timestamp: Date.now(),
+    data: {
+      sessionId,
+      severity: severity || 'error',
+      errorMessage: message
+    }
+  };
+  
+  broadcast(data);
+  console.log('Error logged:', severity, message);
+  
+  res.json({ success: true });
+});
+
+// Start server
+server.listen(PORT, () => {
+  console.log(`🚀 Dashboard Server running on port ${PORT}`);
+  console.log(`📊 WebSocket ready for dashboard connections`);
+  console.log(`🔌 API endpoints ready`);
 });
