@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["cd claude-monitor-dashboard/mcp-server && npm install"]
+
+[start]
+cmd = "cd claude-monitor-dashboard && node mcp-server/index.js"
