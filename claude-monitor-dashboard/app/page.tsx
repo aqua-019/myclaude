@@ -151,13 +151,14 @@ export default function Dashboard() {
           }));
           break;
 
-        case 'token_update':
+        case 'token_usage':
           const requestTime = timestamp - (message.data.startTime || timestamp);
           setResponseTimeHistory(prev => [...prev, requestTime].slice(-20)); // Keep last 20
           
           setMetrics(prev => ({
             ...prev,
-            totalRequests: prev.totalRequests + 1
+            totalRequests: prev.totalRequests + 1,
+            totalTokens: prev.totalTokens + message.data.tokenUsage.total
           }));
           
           setTokenHistory(prev => [
@@ -172,7 +173,7 @@ export default function Dashboard() {
           ].slice(-50));
           
           setSessions(prev => prev.map(session => 
-            session.id === message.data.sessionId
+            session.sessionId === message.data.sessionId
               ? { 
                   ...session, 
                   tokenUsage: {
