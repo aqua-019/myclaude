@@ -103,34 +103,23 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
     }]
   };
 
-  // 4. Hourly Usage - Bar
+  // 4. Hourly Usage - Bar (STATIC demo data)
   const hourlyData = {
     labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
     datasets: [{
       label: 'Requests',
-      data: generateData(50, 40, 24),
+      data: [45, 52, 38, 41, 48, 55, 62, 58, 51, 47, 53, 49, 56, 61, 54, 50, 46, 52, 48, 44, 41, 38, 42, 46],
       backgroundColor: '#3b82f6',
       borderRadius: 4
     }]
   };
 
-  // 5. Prompt Complexity (10 levels) - Bar
+  // 5. Prompt Complexity (10 levels) - Bar (STATIC demo data)
   const complexityData = {
     labels: ['Micro', 'Tiny', 'Small', 'Medium', 'Standard', 'Large', 'Complex', 'V.Large', 'Massive', 'Epic'],
     datasets: [{
       label: 'Count',
-      data: [
-        15 + Math.random() * 10,
-        25 + Math.random() * 15,
-        35 + Math.random() * 20,
-        45 + Math.random() * 25,
-        40 + Math.random() * 20,
-        30 + Math.random() * 15,
-        20 + Math.random() * 10,
-        15 + Math.random() * 8,
-        10 + Math.random() * 5,
-        5 + Math.random() * 3
-      ],
+      data: [18, 32, 45, 58, 52, 38, 24, 16, 12, 7],
       backgroundColor: [
         '#10b981', '#22c55e', '#3b82f6', '#6366f1',
         '#64748b', '#f59e0b', '#f97316', '#ef4444',
