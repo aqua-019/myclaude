@@ -39,10 +39,7 @@ interface Metrics {
 }
 
 export default function PerformanceMetrics({ metrics, responseHistory = [] }: { metrics: Metrics; responseHistory?: number[] }) {
-  // Auto-refresh state for all charts
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  // Chart configurations with muted colors
+  // Generate realistic fluctuating data
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -81,7 +78,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
     labels: ['Sonnet-4', 'Opus-4', 'Haiku-4', 'Sonnet-3.5'],
     datasets: [{
       data: [45 + Math.random() * 10, 30 + Math.random() * 8, 15 + Math.random() * 5, 10 + Math.random() * 3],
-      backgroundColor: ['#64748b', '#475569', '#334155', '#1e293b'],
+      backgroundColor: ['#60a5fa', '#8b5cf6', '#ec4899', '#f59e0b'],
       borderWidth: 0
     }]
   };
@@ -91,7 +88,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
     labels: ['Orchestrator', 'Code Specialist', 'Security', 'DevOps', 'Documentation'],
     datasets: [{
       data: [25 + Math.random() * 5, 30 + Math.random() * 5, 20 + Math.random() * 5, 15 + Math.random() * 3, 10 + Math.random() * 2],
-      backgroundColor: ['#64748b', '#475569', '#334155', '#1e293b', '#0f172a'],
+      backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'],
       borderWidth: 0
     }]
   };
@@ -101,7 +98,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
     labels: ['Solidity', 'Move Lang', 'Rust', 'Testing', 'Deployment'],
     datasets: [{
       data: [30 + Math.random() * 10, 25 + Math.random() * 8, 20 + Math.random() * 5, 15 + Math.random() * 5, 10 + Math.random() * 3],
-      backgroundColor: ['#64748b', '#475569', '#334155', '#1e293b', '#0f172a'],
+      backgroundColor: ['#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4'],
       borderWidth: 0
     }]
   };
@@ -112,7 +109,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
     datasets: [{
       label: 'Requests',
       data: generateData(50, 40, 24),
-      backgroundColor: '#475569',
+      backgroundColor: '#3b82f6',
       borderRadius: 4
     }]
   };
@@ -148,7 +145,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
     labels: ['Code Gen', 'Review', 'Debug', 'Docs', 'Architecture'],
     datasets: [{
       data: [40 + Math.random() * 15, 30 + Math.random() * 10, 25 + Math.random() * 10, 20 + Math.random() * 8, 15 + Math.random() * 5],
-      backgroundColor: ['#64748b99', '#47556999', '#33415599', '#1e293b99', '#0f172a99'],
+      backgroundColor: ['#3b82f699', '#10b98199', '#f59e0b99', '#8b5cf699', '#06b6d499'],
       borderWidth: 0
     }]
   };
@@ -158,7 +155,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
     labels: ['0-100', '100-500', '500-1K', '1K-2K', '2K-3K+'],
     datasets: [{
       data: [20 + Math.random() * 10, 30 + Math.random() * 15, 25 + Math.random() * 10, 15 + Math.random() * 8, 10 + Math.random() * 5],
-      backgroundColor: ['#64748b', '#475569', '#334155', '#1e293b', '#0f172a'],
+      backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'],
       borderWidth: 0
     }]
   };
@@ -170,15 +167,15 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
       {
         label: 'Agent A',
         data: [85 + Math.random() * 10, 90 + Math.random() * 8, 80 + Math.random() * 15, 88 + Math.random() * 10, 92 + Math.random() * 5],
-        backgroundColor: 'rgba(100, 116, 139, 0.2)',
-        borderColor: '#64748b',
+        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        borderColor: '#3b82f6',
         borderWidth: 2
       },
       {
         label: 'Agent B',
         data: [78 + Math.random() * 12, 85 + Math.random() * 10, 88 + Math.random() * 8, 82 + Math.random() * 12, 86 + Math.random() * 8],
-        backgroundColor: 'rgba(71, 85, 105, 0.2)',
-        borderColor: '#475569',
+        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+        borderColor: '#8b5cf6',
         borderWidth: 2
       }
     ]
@@ -190,7 +187,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
     datasets: [{
       label: 'Requests',
       data: [40 + Math.random() * 20, 30 + Math.random() * 15, 20 + Math.random() * 10, 8 + Math.random() * 5, 2 + Math.random() * 2],
-      backgroundColor: '#475569',
+      backgroundColor: '#10b981',
       borderRadius: 4
     }]
   };
@@ -202,7 +199,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
     labels: ['Success', 'Errors'],
     datasets: [{
       data: [totalOps - errors, errors],
-      backgroundColor: ['#64748b', '#dc2626'],
+      backgroundColor: ['#10b981', '#ef4444'],
       borderWidth: 0
     }]
   };
@@ -231,8 +228,8 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
     datasets: [{
       label: 'Tokens/min',
       data: tokenVelocity.map(d => d.rate),
-      borderColor: '#64748b',
-      backgroundColor: 'rgba(100, 116, 139, 0.1)',
+      borderColor: '#3b82f6',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
       tension: 0.4,
       fill: true,
       pointRadius: 2
@@ -248,8 +245,8 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
       {
         label: 'Current Trend',
         data: Array.from({ length: 12 }, (_, i) => (currentTokens / Math.max(uptime, 1)) * (i + 1) * 3600 * 0.000015),
-        borderColor: '#64748b',
-        backgroundColor: 'rgba(100, 116, 139, 0.1)',
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
         tension: 0.4,
         fill: true
       },
@@ -271,8 +268,8 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
     datasets: [{
       label: 'Total Tokens',
       data: Array.from({ length: 20 }, (_, i) => (currentTokens / 20) * (i + 1) + Math.random() * 1000),
-      borderColor: '#64748b',
-      backgroundColor: 'rgba(100, 116, 139, 0.1)',
+      borderColor: '#8b5cf6',
+      backgroundColor: 'rgba(139, 92, 246, 0.1)',
       tension: 0.4,
       fill: true
     }]
@@ -303,7 +300,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
             </div>
           </div>
           <div style={{ height: '200px' }}>
-            <Doughnut key={`models-${refreshKey}`} data={modelsData} options={{ ...chartOptions, scales: undefined }} />
+            <Doughnut  data={modelsData} options={{ ...chartOptions, scales: undefined }} />
           </div>
         </div>
 
@@ -316,7 +313,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
             </div>
           </div>
           <div style={{ height: '200px' }}>
-            <Pie key={`types-${refreshKey}`} data={agentTypesData} options={{ ...chartOptions, scales: undefined }} />
+            <Pie  data={agentTypesData} options={{ ...chartOptions, scales: undefined }} />
           </div>
         </div>
 
@@ -329,7 +326,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
             </div>
           </div>
           <div style={{ height: '200px' }}>
-            <Doughnut key={`subagent-${refreshKey}`} data={subagentData} options={{ ...chartOptions, scales: undefined }} />
+            <Doughnut  data={subagentData} options={{ ...chartOptions, scales: undefined }} />
           </div>
         </div>
       </div>
@@ -345,7 +342,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
             </div>
           </div>
           <div style={{ height: '200px' }}>
-            <Bar key={`hourly-${refreshKey}`} data={hourlyData} options={chartOptions} />
+            <Bar  data={hourlyData} options={chartOptions} />
           </div>
         </div>
 
@@ -358,7 +355,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
             </div>
           </div>
           <div style={{ height: '200px' }}>
-            <Bar key={`complexity-${refreshKey}`} data={complexityData} options={chartOptions} />
+            <Bar  data={complexityData} options={chartOptions} />
           </div>
         </div>
 
@@ -371,7 +368,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
             </div>
           </div>
           <div style={{ height: '200px' }}>
-            <PolarArea key={`requests-${refreshKey}`} data={requestTypesData} options={{ ...chartOptions, scales: undefined }} />
+            <PolarArea  data={requestTypesData} options={{ ...chartOptions, scales: undefined }} />
           </div>
         </div>
       </div>
@@ -387,7 +384,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
             </div>
           </div>
           <div style={{ height: '200px' }}>
-            <Doughnut key={`wordcount-${refreshKey}`} data={wordCountData} options={{ ...chartOptions, scales: undefined }} />
+            <Doughnut  data={wordCountData} options={{ ...chartOptions, scales: undefined }} />
           </div>
         </div>
 
@@ -429,7 +426,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
             </div>
           </div>
           <div style={{ height: '200px' }}>
-            <Radar key={`efficiency-${refreshKey}`} data={efficiencyData} options={{ ...chartOptions, scales: undefined }} />
+            <Radar  data={efficiencyData} options={{ ...chartOptions, scales: undefined }} />
           </div>
         </div>
 
@@ -442,7 +439,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
             </div>
           </div>
           <div style={{ height: '200px' }}>
-            <Bar key={`response-${refreshKey}`} data={responseTimesData} options={chartOptions} />
+            <Bar  data={responseTimesData} options={chartOptions} />
           </div>
         </div>
 
@@ -455,7 +452,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
             </div>
           </div>
           <div style={{ height: '200px' }}>
-            <Pie key={`success-${refreshKey}`} data={successRateData} options={{ ...chartOptions, scales: undefined }} />
+            <Pie  data={successRateData} options={{ ...chartOptions, scales: undefined }} />
           </div>
         </div>
       </div>
@@ -484,7 +481,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
             </div>
           </div>
           <div style={{ height: '200px' }}>
-            <Line key={`cost-${refreshKey}`} data={projectedData} options={chartOptions} />
+            <Line  data={projectedData} options={chartOptions} />
           </div>
         </div>
       </div>
@@ -499,7 +496,7 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
           </div>
         </div>
         <div style={{ height: '250px' }}>
-          <Line key={`cumulative-${refreshKey}`} data={cumulativeData} options={chartOptions} />
+          <Line  data={cumulativeData} options={chartOptions} />
         </div>
       </div>
     </div>
