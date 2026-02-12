@@ -1,0 +1,11 @@
+{
+  "name": "myclaude-railway",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "cd claude-monitor-dashboard && node mcp-server/index.js",
+    "install-deps": "cd claude-monitor-dashboard/mcp-server && npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
