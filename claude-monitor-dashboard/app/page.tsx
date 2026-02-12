@@ -141,7 +141,9 @@ export default function Dashboard() {
       switch (message.type) {
         case 'session_start':
           setSessions(prev => [...prev, {
-            ...message.data,
+            id: message.data.sessionId,
+            agentName: message.data.agentName,
+            model: message.data.model,
             active: true,
             startTime: timestamp
           }]);
@@ -173,7 +175,7 @@ export default function Dashboard() {
           ].slice(-50));
           
           setSessions(prev => prev.map(session => 
-            session.sessionId === message.data.sessionId
+            session.id === message.data.sessionId
               ? { 
                   ...session, 
                   tokenUsage: {
