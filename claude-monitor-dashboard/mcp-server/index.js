@@ -4,7 +4,7 @@ import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprot
 import { WebSocketServer } from 'ws';
 
 // WebSocket server for dashboard communication
-const wss = new WebSocketServer({ port: 8080 });
+const wss = new WebSocketServer({ port: process.env.PORT || 8080 });
 const clients = new Set();
 
 wss.on('connection', (ws) => {
@@ -323,7 +323,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 // Start MCP server
 async function main() {
   console.log('MCP Server starting...');
-  console.log('WebSocket server listening on port 8080');
+  console.log(`WebSocket server listening on port ${process.env.PORT || 8080}`);
   
   const transport = new StdioServerTransport();
   await server.connect(transport);
