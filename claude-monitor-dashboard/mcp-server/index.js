@@ -2,12 +2,15 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 8080;
+const DATA_FILE = path.join(process.cwd(), 'dashboard-data.json');
 
 // Middleware
 app.use(cors());
@@ -16,10 +19,54 @@ app.use(express.json());
 // Store connected dashboard clients
 const clients = new Set();
 
+// Persistent data storage
+let persistentData = {
+  sessions: [],
+  tokens: [],
+  tasks: []
+};
+
+// Load data from file on startup
+function loadData() {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const data = fs.readFileSync(DATA_FILE, 'utf8');
+      persistentData = JSON.parse(data);
+      console.log('📂 Loaded persistent data:', {
+        sessions: persistentData.sessions.length,
+        tokens: persistentData.tokens.length,
+        tasks: persistentData.tasks.length
+      });
+    } else {
+      console.log('📂 No existing data file, starting fresh');
+    }
+  } catch (error) {
+    console.error('❌ Error loading data:', error);
+  }
+}
+
+// Save data to file
+function saveData() {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(persistentData, null, 2));
+  } catch (error) {
+    console.error('❌ Error saving data:', error);
+  }
+}
+
+// Load data on startup
+loadData();
+
 // WebSocket connection handler
 wss.on('connection', (ws) => {
   clients.add(ws);
   console.log('Dashboard client connected. Total clients:', clients.size);
+  
+  // Send all existing data to new client
+  ws.send(JSON.stringify({
+    type: 'initial_data',
+    data: persistentData
+  }));
   
   ws.on('close', () => {
     clients.delete(ws);
@@ -51,6 +98,10 @@ app.get('/health', (req, res) => {
 // Log session start
 app.post('/api/session/start', (req, res) => {
   const { sessionId, agentName, model } = req.body;
+  
+  const sessionData = { sessionId, agentName, model, timestamp: Date.now() };
+  persistentData.sessions.push(sessionData);
+  saveData();
   
   const data = {
     type: 'session_start',
@@ -84,6 +135,10 @@ app.post('/api/session/end', (req, res) => {
 app.post('/api/tokens', (req, res) => {
   const { sessionId, inputTokens, outputTokens } = req.body;
   
+  const tokenData = { sessionId, inputTokens, outputTokens, total: inputTokens + outputTokens, timestamp: Date.now() };
+  persistentData.tokens.push(tokenData);
+  saveData();
+  
   const data = {
     type: 'token_usage',
     timestamp: Date.now(),
@@ -106,6 +161,10 @@ app.post('/api/tokens', (req, res) => {
 // Log task start
 app.post('/api/task/start', (req, res) => {
   const { taskId, sessionId, description, priority } = req.body;
+  
+  const taskData = { taskId, sessionId, description, priority: priority || 'medium', status: 'in_progress', startTime: Date.now() };
+  persistentData.tasks.push(taskData);
+  saveData();
   
   const data = {
     type: 'task_start',
@@ -132,6 +191,15 @@ app.post('/api/task/start', (req, res) => {
 // Log task complete
 app.post('/api/task/complete', (req, res) => {
   const { taskId, status, duration } = req.body;
+  
+  // Update task in persistent storage
+  const task = persistentData.tasks.find(t => t.taskId === taskId);
+  if (task) {
+    task.status = status || 'success';
+    task.endTime = Date.now();
+    task.duration = duration;
+    saveData();
+  }
   
   const data = {
     type: 'task_complete',
