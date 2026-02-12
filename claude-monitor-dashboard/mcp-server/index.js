@@ -83,17 +83,34 @@ wss.on('connection', async (ws) => {
     const tokens = await pool.query('SELECT * FROM tokens ORDER BY created_at DESC LIMIT 100');
     const tasks = await pool.query('SELECT * FROM tasks ORDER BY start_time DESC LIMIT 100');
 
+    // Calculate token totals per session
+    const sessionTokens = {};
+    tokens.rows.forEach(t => {
+      if (!sessionTokens[t.session_id]) {
+        sessionTokens[t.session_id] = { input: 0, output: 0, total: 0 };
+      }
+      sessionTokens[t.session_id].input += t.input_tokens;
+      sessionTokens[t.session_id].output += t.output_tokens;
+      sessionTokens[t.session_id].total += t.total_tokens;
+    });
+
+    // Attach token totals to sessions
+    const sessionsWithTokens = sessions.rows.map(s => ({
+      ...s,
+      tokenUsage: sessionTokens[s.session_id] || { input: 0, output: 0, total: 0 }
+    }));
+
     ws.send(JSON.stringify({
       type: 'initial_data',
       data: {
-        sessions: sessions.rows,
+        sessions: sessionsWithTokens,
         tokens: tokens.rows,
         tasks: tasks.rows
       }
     }));
 
     console.log('📊 Sent initial data to client:', {
-      sessions: sessions.rows.length,
+      sessions: sessionsWithTokens.length,
       tokens: tokens.rows.length,
       tasks: tasks.rows.length
     });
