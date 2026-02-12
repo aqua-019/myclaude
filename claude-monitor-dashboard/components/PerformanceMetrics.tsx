@@ -42,14 +42,6 @@ export default function PerformanceMetrics({ metrics, responseHistory = [] }: { 
   // Auto-refresh state for all charts
   const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshKey(prev => prev + 1);
-    }, 3000); // Refresh every 3 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
   // Chart configurations with muted colors
   const chartOptions = {
     responsive: true,
