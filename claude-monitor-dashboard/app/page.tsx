@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import SessionCard from '../components/SessionCard';
 import MetricsOverview from '../components/MetricsOverview';
-import ProjectOverview from '../components/ProjectOverview';
 import TaskList from '../components/TaskList';
 import TokenChart from '../components/TokenChart';
 import AgentDistributionChart from '../components/AgentDistributionChart';
@@ -57,16 +56,6 @@ export default function Dashboard() {
     costEstimate: 0,
     successRate: 0,
     avgSpeed: 0
-  });
-  const [project, setProject] = useState({
-    name: 'Solidity DEX Development',
-    description: 'Automated Market Maker with Multi-Token Support',
-    progress: 0,
-    tasksCompleted: 0,
-    totalTasks: 0,
-    agentsDeployed: 0,
-    codeCoverage: 0,
-    estimatedCompletion: 0
   });
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tokenHistory, setTokenHistory] = useState<any[]>([]);
@@ -131,19 +120,6 @@ export default function Dashboard() {
     const interval = setInterval(() => {
       const newMetrics = calculateMetrics();
       setMetrics(newMetrics);
-      
-      // Update project metrics
-      setProject(prev => ({
-        ...prev,
-        progress: Math.min(100, Math.round((newMetrics.completedTasks / Math.max(1, tasks.length)) * 100)),
-        tasksCompleted: newMetrics.completedTasks,
-        totalTasks: tasks.length,
-        agentsDeployed: sessions.length,
-        codeCoverage: Math.min(100, 60 + (newMetrics.completedTasks * 2)), // Simulated
-        estimatedCompletion: newMetrics.pendingTasks > 0 
-          ? parseFloat((newMetrics.pendingTasks * newMetrics.avgResponseTime / 3600).toFixed(1))
-          : 0
-      }));
     }, 3000); // Refresh every 3 seconds
 
     return () => clearInterval(interval);
@@ -297,9 +273,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-
-        {/* Primary Project */}
-        <ProjectOverview project={project} />
 
         {/* Metrics Overview - 16 Panels */}
         <MetricsOverview metrics={metrics} />
