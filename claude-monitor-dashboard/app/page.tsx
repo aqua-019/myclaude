@@ -150,7 +150,8 @@ export default function Dashboard() {
               agentName: s.agent_name,
               model: s.model,
               active: true,
-              startTime: s.created_at
+              startTime: s.created_at,
+              tokenUsage: s.tokenUsage || undefined
             }));
             setSessions(loadedSessions);
           }
